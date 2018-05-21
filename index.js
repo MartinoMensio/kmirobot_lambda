@@ -3,11 +3,17 @@
 
 const Alexa = require('ask-sdk');
 
-const requests = require('requests')
+const request = require('request')
+const rp = require('request-promise');
+const http = require('http');
+const AWS = require('aws-sdk');
 
-var AWS = require('aws-sdk');
+
+const HURIC_URI = process.env['HURIC_URI']
+// 'http://137.108.125.184:5000/nlu-interface'
+
 AWS.config.update({region: 'eu-west-1'});
-var lexruntime = new AWS.LexRuntime();
+const lexruntime = new AWS.LexRuntime();
 
 const expand_spatial = (string, slots_by_name) => {
   var params = {
@@ -31,8 +37,19 @@ const expand_spatial = (string, slots_by_name) => {
 };
 
 const huric_post = (req) => {
-  const r = requests.get('http://networkcheck.kde.org/');
-  return r.status_code;
+  const options = {
+    method: 'POST',
+    uri: HURIC_URI,
+    body: req,
+    json: true
+  }
+  return rp(options).then((raw_response) => {
+    console.log('request OK')
+    return raw_response.data || raw_response;
+  }).catch((error) => {
+    console.log('request error:' + error)
+    return 'error in communication: ' + error;
+  });
 };
 
 const HuricHandler = {
@@ -51,6 +68,7 @@ const HuricHandler = {
     
     let promises = [];
     const slots_by_name = {};
+    let huric_response = null;
     
     if (request.intent) {
       const slots = request.intent.slots;
@@ -59,9 +77,13 @@ const HuricHandler = {
         slots_by_name[slots[i].name] = slots[i].value;
       }
       result_str = 'Intent:' + request.intent.name + ' ' ;
+      const huric_promise = huric_post(request).then((res) => {
+        huric_response = res;
+      });
+      promises.push(huric_promise);
       switch (request.intent.name) {
         case 'Attaching':
-          res = 'I would connect or disconnect if only I had hands! ' + huric_post(null);
+          res = 'I would connect or disconnect if only I had hands! '; //+ huric_post(null);
           break;
         case 'Being_in_category':
           res = 'Thanks for telling me that ' + slots_by_name['Item'] + ' is a ' + slots_by_name['Category'];
@@ -133,6 +155,7 @@ const HuricHandler = {
     }
 
     return Promise.all(promises).then((resolved_promises) => {
+      result_str += 'huric_response:' + JSON.stringify(huric_response) + ', '
       for(const k in slots_by_name) {
         const value = slots_by_name[k];
         if (value) {
@@ -211,6 +234,12 @@ const STOP_MESSAGE = 'Goodbye!';
 
 const skillBuilder = Alexa.SkillBuilders.standard();
 
+const test_fn = () => {
+  huric_post({'some': 'data'}).then((res) => {
+    console.log(res);
+  });
+}
+
 exports.handler = skillBuilder
   .addRequestHandlers(
     HuricHandler,
@@ -220,3 +249,7 @@ exports.handler = skillBuilder
   )
   .addErrorHandlers(ErrorHandler)
   .lambda();
+
+exports.test = test_fn;
+
+// test_fn()
