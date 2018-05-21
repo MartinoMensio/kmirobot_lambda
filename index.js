@@ -9,6 +9,8 @@ const http = require('http');
 const AWS = require('aws-sdk');
 
 
+// the timeout for the external requests towards kmirobot
+const TIMEOUT_MS = 3000
 const HURIC_URI = process.env['HURIC_URI']
 // 'http://137.108.125.184:5000/nlu-interface'
 
@@ -41,7 +43,8 @@ const huric_post = (req) => {
     method: 'POST',
     uri: HURIC_URI,
     body: req,
-    json: true
+    json: true,
+    timeout: TIMEOUT_MS
   }
   return rp(options).then((raw_response) => {
     console.log('request OK')
