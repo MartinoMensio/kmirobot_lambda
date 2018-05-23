@@ -10,7 +10,7 @@ const AWS = require('aws-sdk');
 
 
 // the timeout for the external requests towards kmirobot
-const TIMEOUT_MS = 3000
+const TIMEOUT_MS = 60 * 5 * 1000
 const HURIC_URI = process.env['HURIC_URI']
 // 'http://137.108.125.184:5000/nlu-interface'
 
@@ -48,7 +48,11 @@ const huric_post = (req) => {
   }
   return rp(options).then((raw_response) => {
     console.log('request OK')
-    return raw_response.data || raw_response;
+    if (raw_response) {
+      return raw_response.data || raw_response;
+    } else {
+      return '200 OK';
+    }
   }).catch((error) => {
     console.log('request error:' + error)
     return 'error in communication: ' + error;
@@ -95,17 +99,7 @@ const HuricHandler = {
           res = 'Now I know that ' + slots_by_name['Theme'] + ' is located ' + slots_by_name['Location'] + '. Great!';
           break;
         case 'Bringing':
-          let theme = slots_by_name['Theme'];
-          let lex_promise = expand_spatial(theme, slots_by_name);
-          promises.push(lex_promise.then((lex_response) => {
-            if (lex_response) {
-              theme = lex_response.Trajector;
-              res = 'I can\'t take ' + lex_response.Trajector + ' but you can come with me ' + lex_response.Spatial_Indicator + ' ' + lex_response.Landmark;
-            } else {
-              res = 'I would bring ' + theme + ', but I can\'t grab it';
-            }
-            return;
-          }));
+          res = 'I would bring ' + slots_by_name['Theme'] + ', but I can\'t grab it';
           break;
         case 'Change_operational_state':
           res = 'How can I turn it ' + slots_by_name['Operational_state'] + ' without hands?';
@@ -154,7 +148,7 @@ const HuricHandler = {
           res = 'I have no further instruction on how to process the intent ' + request.intent.name;
       }
     } else {
-      result_str = res = '<prosody pitch="high">Hello</prosody>. I am the office robot! Please ask me something';
+      result_str = res = 'Roo-bot ready to fulfill your requests! Please ask me something';
     }
 
     return Promise.all(promises).then((resolved_promises) => {
@@ -229,7 +223,7 @@ const ErrorHandler = {
   },
 };
 
-const SKILL_NAME = 'office robot';
+const SKILL_NAME = 'roo bot';
 const HELP_MESSAGE = 'You can ask me to go somewhere or check things in the office, or, you can say exit... What can I help you with?';
 const HELP_REPROMPT = 'What can I help you with?';
 const STOP_MESSAGE = 'Goodbye!';
