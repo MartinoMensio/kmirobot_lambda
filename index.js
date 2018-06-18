@@ -64,7 +64,7 @@ const HuricHandler = {
     const request = handlerInput.requestEnvelope.request;
     //return true;
     return request.type === 'LaunchRequest'
-      || (request.type === 'IntentRequest'
+      || ((request.type === 'IntentRequest' || request.type === 'CanFulfillIntentRequest')
         && ["Attaching", "Being_in_category", "Being_located", "Bringing", "Change_operational_state", "Closure", "Entering", "Following", "Giving", "Inspecting", "Motion", "Perception_active", "Placing", "Releasing", "Searching", "Taking"].includes(request.intent.name));
   },
   handle(handlerInput) {
@@ -164,6 +164,9 @@ const HuricHandler = {
         // let the session open
         .withShouldEndSession(false)
         .withSimpleCard(SKILL_NAME, result_str)
+        // let's say we are able to handle friction-less interactions (only EN-US)
+        // https://developer.amazon.com/docs/custom-skills/understand-name-free-interaction-for-custom-skills.html
+        .withCanFulfillIntent(true)
         .getResponse();
     });
   },
